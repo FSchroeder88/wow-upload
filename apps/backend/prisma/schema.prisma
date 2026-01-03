@@ -1,0 +1,30 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  githubId  String   @unique
+  username  String
+  avatarUrl String?
+  createdAt DateTime @default(now())
+
+  uploads   Upload[]
+}
+
+model Upload {
+  id           Int      @id @default(autoincrement())
+  originalName String
+  storageName  String   @unique
+  mimeType     String
+  size         Int
+  createdAt    DateTime @default(now())
+
+  uploader     User?    @relation(fields: [uploaderId], references: [id])
+  uploaderId   Int?
+}

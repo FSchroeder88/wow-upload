@@ -1,0 +1,77 @@
+<div class="page">
+  <header class="header">
+    <div>
+      <h1>WoW Upload</h1>
+      <p class="sub">Upload sniffs/archives. Anonymous upload allowed.</p>
+    </div>
+
+    <div class="actions">
+      <button class="primary" (click)="auth.login()" *ngIf="!isAuthed()">
+        Login with GitHub
+      </button>
+
+
+
+      <ng-container *ngIf="isAuthed()">
+        <button (click)="reloadUploads()">Refresh</button>
+        <button (click)="onLogout()">Logout</button>
+      </ng-container>
+    </div>
+  </header>
+
+  <section class="card">
+    <h2>Upload</h2>
+
+    <div class="drop" (drop)="onDrop($event)" (dragover)="onDragOver($event)">
+      <p>Drop files here or click to select</p>
+      <input #fileInput type="file" multiple (change)="onPickFiles($event)" hidden />
+      <button type="button" class="primary" (click)="fileInput.click()">
+        Select Files
+      </button>
+      <div class="hint">
+        Supports: .pkt, .zip, .7z, .rar, .tar.gz
+      </div>
+
+    </div>
+
+    <div class="queue" *ngIf="queue().length">
+      <div class="queue-header">
+        <strong>Queue</strong>
+        <button (click)="startUploadQueue()">Start upload</button>
+      </div>
+
+      <div class="queue-item" *ngFor="let q of queue(); let i = index">
+        <div class="row">
+          <span class="name">{{ q.file.name }}</span>
+          <span class="status">{{ q.status }}</span>
+        </div>
+        <div class="bar">
+          <div class="fill" [style.width.%]="q.progress"></div>
+        </div>
+        <div class="error" *ngIf="q.status === 'error'">{{ q.error }}</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card" *ngIf="isAuthed(); else loginHint">
+    <h2>Uploads</h2>
+
+    <div *ngIf="uploads().length === 0">No uploads yet.</div>
+
+    <div class="upload-item" *ngFor="let u of uploads()">
+      <div class="row">
+        <span class="name">{{ u.originalName }}</span>
+        <span class="meta">{{ u.size }} bytes</span>
+      </div>
+
+      <a class="dl" [href]="downloadUrl(u.id)">Download</a>
+    </div>
+  </section>
+
+  <ng-template #loginHint>
+    <section class="card">
+      <h2>Uploads</h2>
+      <p>You must be logged in to view or download uploads.</p>
+    </section>
+  </ng-template>
+</div>
