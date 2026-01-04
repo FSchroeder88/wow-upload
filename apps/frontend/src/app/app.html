@@ -2,7 +2,7 @@
   <header class="header">
     <div>
       <h1>WoW Upload</h1>
-      <p class="sub">Upload sniffs/archives. Anonymous upload allowed.</p>
+
     </div>
 
     <div class="actions">
@@ -37,13 +37,27 @@
     <div class="queue" *ngIf="queue().length">
       <div class="queue-header">
         <strong>Queue</strong>
-        <button (click)="startUploadQueue()">Start upload</button>
+        <div>
+          <button (click)="startUploadQueue()" [disabled]="uploading() || !hasQueued()">
+            Start upload
+          </button>
+          <button (click)="clearDone()" style="margin-left: 8px;">Clear done</button>
+          <button (click)="clearErrors()" style="margin-left: 8px;">Clear errors</button>
+        </div>
       </div>
 
       <div class="queue-item" *ngFor="let q of queue(); let i = index">
         <div class="row">
           <span class="name">{{ q.file.name }}</span>
-          <span class="status">{{ q.status }}</span>
+
+          <div class="status">
+            <span class="badge" [class]="q.status">{{ q.status }}</span>
+
+            <button class="remove" *ngIf="q.status !== 'uploading'" (click)="removeFromQueue(i)"
+              title="Remove from queue">
+              ✕
+            </button>
+          </div>
         </div>
         <div class="bar">
           <div class="fill" [style.width.%]="q.progress"></div>
@@ -64,7 +78,9 @@
         <span class="meta">{{ u.size }} bytes</span>
       </div>
 
-      <a class="dl" [href]="downloadUrl(u.id)">Download</a>
+      <button class="dl" (click)="window.location.href = downloadUrl(u.id)">
+        Download
+      </button>
     </div>
   </section>
 

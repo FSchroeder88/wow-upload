@@ -18,6 +18,7 @@ type QueueItem = {
   styleUrl: './app.scss',
 })
 export class App implements OnInit {
+window: any;
   constructor(public auth: AuthService, private uploadsApi: UploadsService) {}
 
   uploads = signal<UploadListItem[]>([]);
@@ -26,11 +27,15 @@ export class App implements OnInit {
 
   isAuthed = computed(() => this.auth.me().authenticated === true);
 
+  private readonly allowed = ['.7z', '.rar', '.zip', '.pkt', '.tar.gz'];
+
   ngOnInit(): void {
-    // beim Start Login-Status holen
     this.auth.refreshMe().subscribe({
       next: () => {
         if (this.isAuthed()) this.reloadUploads();
+      },
+      error: () => {
+        // ignore - me() wird in AuthService auf unauth gesetzt
       },
     });
   }
@@ -40,32 +45,6 @@ export class App implements OnInit {
     const files = Array.from(input.files ?? []);
     this.addToQueue(files);
     input.value = '';
-  }
-
-  onLogout() {
-    this.auth.logout().subscribe({
-      next: () => this.uploads.set([]),
-      error: () => this.uploads.set([]),
-    });
-  }
-
-  private readonly allowed = ['.pkt', '.zip', '.7z', '.rar', '.tar.gz'];
-
-  private isAllowed(name: string): boolean {
-    const lower = name.toLowerCase();
-    return this.allowed.some((ext) => lower.endsWith(ext));
-  }
-
-  addToQueue(files: File[]) {
-    const allowedFiles = files.filter((f) => this.isAllowed(f.name));
-
-    const mapped = allowedFiles.map((f) => ({
-      file: f,
-      progress: 0,
-      status: 'queued' as const,
-    }));
-
-    this.queue.set([...this.queue(), ...mapped]);
   }
 
   onDrop(ev: DragEvent) {
@@ -78,17 +57,81 @@ export class App implements OnInit {
     ev.preventDefault();
   }
 
-/*   addToQueue(files: File[]) {
+  onLogout() {
+    this.auth.logout().subscribe({
+      next: () => {
+        this.uploads.set([]);
+        this.queue.set([]);
+      },
+      error: () => {
+        this.uploads.set([]);
+        this.queue.set([]);
+      },
+    });
+  }
+
+  hasQueued = computed(() => this.queue().some(q => q.status === 'queued'));
+
+
+  // --------- Queue helpers ---------
+
+  private isAllowed(name: string): boolean {
+    const lower = name.toLowerCase();
+    return this.allowed.some((ext) => lower.endsWith(ext));
+  }
+
+  private getExt(name: string): string {
+    const lower = name.toLowerCase();
+    if (lower.endsWith('.tar.gz')) return '.tar.gz';
+    const idx = lower.lastIndexOf('.');
+    return idx >= 0 ? lower.slice(idx) : '';
+  }
+
+  addToQueue(files: File[]) {
     if (!files.length) return;
 
-    const mapped: QueueItem[] = files.map((f) => ({
-      file: f,
-      progress: 0,
-      status: 'queued',
-    }));
+    const mapped: QueueItem[] = files.map((f) => {
+      if (!this.isAllowed(f.name)) {
+        return {
+          file: f,
+          progress: 0,
+          status: 'error',
+          error: `File type not allowed (${
+            this.getExt(f.name) || 'unknown'
+          }). Allowed: ${this.allowed.join(', ')}`,
+        };
+      }
+
+      return {
+        file: f,
+        progress: 0,
+        status: 'queued',
+      };
+    });
 
     this.queue.set([...this.queue(), ...mapped]);
-  } */
+  }
+
+  removeFromQueue(index: number) {
+    // optional: wenn gerade uploading und genau dieses Item -> nicht erlauben
+    const copy = [...this.queue()];
+    const item = copy[index];
+    if (!item) return;
+
+    if (item.status === 'uploading') return; // simple safety
+    copy.splice(index, 1);
+    this.queue.set(copy);
+  }
+
+  clearDone() {
+    this.queue.set(this.queue().filter((q) => q.status !== 'done'));
+  }
+
+  clearErrors() {
+    this.queue.set(this.queue().filter((q) => q.status !== 'error'));
+  }
+
+  // --------- Upload queue runner ---------
 
   startUploadQueue() {
     if (this.uploading()) return;
@@ -102,10 +145,12 @@ export class App implements OnInit {
 
   private uploadOne(index: number) {
     const item = this.queue()[index];
-    if (!item) return;
+    if (!item) {
+      this.uploading.set(false);
+      return;
+    }
 
-    // status -> uploading
-    this.updateQueue(index, { status: 'uploading', progress: 0 });
+    this.updateQueue(index, { status: 'uploading', progress: 0, error: undefined });
 
     this.uploadsApi.uploadFile(item.file).subscribe({
       next: (ev) => {
@@ -114,21 +159,17 @@ export class App implements OnInit {
         }
         if (ev.done) {
           this.updateQueue(index, { status: 'done', progress: 100 });
-          // wenn eingeloggt, Liste aktualisieren
           if (this.isAuthed()) this.reloadUploads();
         }
       },
-      error: (err: unknown) => {
-        this.updateQueue(index, {
-          status: 'error',
-          error: 'Upload failed',
-        });
+      error: () => {
+        this.updateQueue(index, { status: 'error', error: 'Upload failed' });
         this.uploading.set(false);
-        this.startUploadQueue(); // weiter mit dem nächsten
+        this.startUploadQueue();
       },
       complete: () => {
         this.uploading.set(false);
-        this.startUploadQueue(); // nächstes queued file
+        this.startUploadQueue();
       },
     });
   }
@@ -138,6 +179,8 @@ export class App implements OnInit {
     copy[index] = { ...copy[index], ...patch };
     this.queue.set(copy);
   }
+
+  // --------- Upload listing ---------
 
   reloadUploads() {
     this.uploadsApi.list().subscribe({

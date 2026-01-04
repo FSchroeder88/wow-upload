@@ -157,6 +157,53 @@
     color: #fca5a5;
     font-size: 13px;
   }
+
+  .status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .badge {
+    font-size: 12px;
+    padding: 3px 8px;
+    border-radius: 999px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .badge.queued {
+    background: rgba(148, 163, 184, 0.15);
+    color: #cbd5e1;
+  }
+
+  .badge.uploading {
+    background: rgba(59, 130, 246, 0.2);
+    color: #93c5fd;
+  }
+
+  .badge.done {
+    background: rgba(16, 185, 129, 0.2);
+    color: #34d399;
+  }
+
+  .badge.error {
+    background: rgba(239, 68, 68, 0.2);
+    color: #fca5a5;
+  }
+
+  button.remove {
+    border: none;
+    background: transparent;
+    color: #94a3b8;
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 1;
+
+    &:hover {
+      color: #f87171;
+    }
+  }
 }
 
 .upload-item {
@@ -171,18 +218,17 @@
     font-size: 14px;
   }
 
-  .drop button {
-    margin-top: 14px;
-  }
-
   .dl {
-    display: inline-block;
     margin-top: 8px;
+    padding: 6px 12px;
+    border-radius: 10px;
+    border: 1px solid rgba(16, 185, 129, 0.5);
+    background: rgba(16, 185, 129, 0.15);
     color: #34d399;
-    text-decoration: none;
+    cursor: pointer;
 
     &:hover {
-      text-decoration: underline;
+      background: rgba(16, 185, 129, 0.25);
     }
   }
 }
