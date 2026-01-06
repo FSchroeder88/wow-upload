@@ -4,7 +4,7 @@
 ![Angular](https://img.shields.io/badge/angular-standalone-red)
 ![Auth](https://img.shields.io/badge/auth-GitHub%20OAuth-black)
 
-Webanwendung zum **Hochladen, Verwalten und Herunterladen von Upload-Dateien**  
+Webanwendung zum **Hochladen, Verwalten und Herunterladen von Dateien**  
 mit **GitHub OAuth Login**, **Upload-Queue** und **Progressbars**.
 
 ---
