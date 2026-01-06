@@ -1,53 +1,59 @@
+# WoW Upload – Upload Service
 
-WoW Upload Upload Service
+![Node](https://img.shields.io/badge/node-%3E%3D18-green)
+![Angular](https://img.shields.io/badge/angular-standalone-red)
+![Auth](https://img.shields.io/badge/auth-GitHub%20OAuth-black)
 
-Webanwendung zum hochladen, verwalten und herunterladen von Upload-Dateien
-mit GitHub OAuth Login, Upload-Queue und Progressbars.
+Webanwendung zum **Hochladen, Verwalten und Herunterladen von Upload-Dateien**  
+mit **GitHub OAuth Login**, **Upload-Queue** und **Progressbars**.
 
-Features
+---
 
-Upload von Dateien: .pkt .zip .7z .rar .tar .gz
+## ✨ Features
 
-Upload Queue mit Fortschrittsanzeige
+- Upload von Dateien:
+  - `.pkt`
+  - `.zip`
+  - `.7z`
+  - `.rar`
+  - `.tar.gz`
+- **Upload Queue** mit Fortschrittsanzeige
+- **Anonymer Upload erlaubt**
+- **GitHub Login (OAuth)**
+- Uploads werden (falls eingeloggt) **Usern zugeordnet**
+- **Nur eingeloggte User**:
+  - sehen Uploads
+  - können Dateien herunterladen
+- Dateien werden **lokal auf dem Server gespeichert**
 
-Anonymer Upload erlaubt
+---
 
-GitHub Login (OAuth)
+## 🧱 Tech-Stack
 
-Uploads werden (falls eingeloggt) Usern zugeordnet
+### Frontend
+- Angular (Standalone Components)
+- Signals
+- HttpClient
+- Standardmäßig erreichbar unter  
 
-Nur eingeloggte User:
+http://localhost:4200
 
-sehen Uploads
 
-können Dateien herunterladen
+### Backend
+- NestJS
+- Prisma + SQLite
+- Passport GitHub OAuth
+- JWT Authentication
+- Standardmäßig erreichbar unter  
 
-Backend speichert Dateien lokal auf dem Server
+http://localhost:3000
 
-🧱 Tech-Stack
-Frontend
 
-Angular (Standalone Components)
+---
 
-Signals
+## 📁 Projektstruktur
 
-Fetch / HttpClient
-
-läuft standardmäßig auf http://localhost:4200
-
-Backend
-
-NestJS
-
-Prisma + SQLite
-
-Passport GitHub OAuth
-
-JWT Auth
-
-läuft standardmäßig auf http://localhost:3000
-
-📁 Projektstruktur
+```text
 sniff-repo/
 ├── apps/
 │   ├── backend/
@@ -59,7 +65,7 @@ sniff-repo/
 │   │   │   ├── uploads/
 │   │   │   └── main.ts
 │   │   ├── uploads/          # gespeicherte Dateien (lokal)
-│   │   └── dev.db            # SQLite DB
+│   │   └── dev.db            # SQLite Datenbank
 │   └── frontend/
 │       ├── src/
 │       │   ├── app/
@@ -68,38 +74,39 @@ sniff-repo/
 └── README.md
 
 🔐 Authentifizierung (GitHub OAuth)
-GitHub App anlegen
+GitHub OAuth App anlegen
 
-GitHub → Settings → Developer settings → OAuth Apps
+    GitHub → Settings → Developer settings → OAuth Apps
 
-New OAuth App
+    New OAuth App
 
-Einstellungen:
+    Einstellungen:
 
-Application name: WoW Upload
+        Application name:
+
+WoW Upload
 
 Homepage URL:
 
 http://<SERVER-IP-ODER-DOMAIN>
 
-
 Authorization callback URL:
 
-http://<SERVER-IP-ODER-DOMAIN>:3000/auth/github/callback
+        http://<SERVER-IP-ODER-DOMAIN>:3000/auth/github/callback
 
-
-Client ID und Client Secret kopieren
+    Client ID und Client Secret kopieren
 
 ⚙️ Backend Setup (Server)
 Voraussetzungen
 
-Node.js ≥ 18
+    Node.js ≥ 18
 
-npm
+    npm
 
-Git
+    Git
 
 1️⃣ Repository klonen
+
 git clone https://github.com/FSchroeder88/wow-upload.git
 cd wow-upload/apps/backend
 
@@ -115,66 +122,54 @@ JWT_EXPIRES_IN=7d
 
 FRONTEND_URL=http://<SERVER-IP-ODER-DOMAIN>:4200
 
-
-⚠️ .env ist nicht im Git, muss manuell erstellt werden.
+    ⚠️ Hinweis:
+    .env ist nicht im Git und muss manuell erstellt werden.
 
 3️⃣ Abhängigkeiten installieren
+
 npm install
 
 4️⃣ Datenbank initialisieren
+
 npx prisma migrate deploy
 
-
-Erstellt automatisch dev.db
+    Erstellt automatisch die Datei dev.db
 
 5️⃣ Backend starten
-npm run start
 
+npm run start
 
 Backend läuft jetzt auf:
 
 http://localhost:3000
-
 
 Healthcheck:
 
 GET /health
 
 🖥️ Frontend Setup
+
 cd ../frontend
 npm install
 npm run start
-
 
 Frontend läuft auf:
 
 http://localhost:4200
 
 🔄 Ablauf für User
-
 Nicht eingeloggt
 
-Upload möglich
+    Upload möglich
 
-Keine Upload-Liste sichtbar
+    Keine Upload-Liste sichtbar
 
-Kein Download möglich
+    Kein Download möglich
 
 GitHub Login
 
-Uploads sichtbar
+    Uploads sichtbar
 
-Downloads erlaubt
+    Downloads erlaubt
 
-Uploads werden User zugeordnet
-
-📦 Speicherort der Dateien
-
-Uploads werden lokal auf dem Server gespeichert:
-
-apps/backend/uploads/
-
-
-Dateiname = UUID
-
-Originalname in der Datenbank gespeichert
+    Uploads werden dem User zugeordnet
