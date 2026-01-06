@@ -1,10 +1,10 @@
-# WoW Upload – Upload Service
+# W Upload – Upload Service
 
 ![Node](https://img.shields.io/badge/node-%3E%3D18-green)
 ![Angular](https://img.shields.io/badge/angular-standalone-red)
 ![Auth](https://img.shields.io/badge/auth-GitHub%20OAuth-black)
 
-Webanwendung zum **Hochladen, Verwalten und Herunterladen von Upload-Dateien**  
+Webanwendung zum **Hochladen, Verwalten und Herunterladen von Dateien**  
 mit **GitHub OAuth Login**, **Upload-Queue** und **Progressbars**.
 
 ---
