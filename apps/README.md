@@ -73,44 +73,46 @@ sniff-repo/
 │       └── angular.json
 └── README.md
 
-🔐 Authentifizierung (GitHub OAuth)
+Authentifizierung (GitHub OAuth)
 GitHub OAuth App anlegen
 
-    GitHub → Settings → Developer settings → OAuth Apps
+GitHub → Settings → Developer settings → OAuth Apps
 
-    New OAuth App
+New OAuth App
 
-    Einstellungen:
+Einstellungen:
 
-        Application name:
+Application name:
 
 WoW Upload
+
 
 Homepage URL:
 
 http://<SERVER-IP-ODER-DOMAIN>
 
+
 Authorization callback URL:
 
-        http://<SERVER-IP-ODER-DOMAIN>:3000/auth/github/callback
+http://<SERVER-IP-ODER-DOMAIN>:3000/auth/github/callback
 
-    Client ID und Client Secret kopieren
 
-⚙️ Backend Setup (Server)
+Client ID und Client Secret kopieren
+
+Backend Setup (Server)
 Voraussetzungen
 
-    Node.js ≥ 18
+Node.js ≥ 18
 
-    npm
+npm
 
-    Git
+Git
 
-1️⃣ Repository klonen
-
+Repository klonen
 git clone https://github.com/FSchroeder88/wow-upload.git
 cd wow-upload/apps/backend
 
-2️⃣ Environment Variablen
+Environment Variablen
 
 In apps/backend/.env:
 
@@ -122,54 +124,55 @@ JWT_EXPIRES_IN=7d
 
 FRONTEND_URL=http://<SERVER-IP-ODER-DOMAIN>:4200
 
-    ⚠️ Hinweis:
-    .env ist nicht im Git und muss manuell erstellt werden.
 
-3️⃣ Abhängigkeiten installieren
+Hinweis:
+.env ist nicht im Git und muss manuell erstellt werden.
 
+Abhängigkeiten installieren
 npm install
 
-4️⃣ Datenbank initialisieren
-
+Datenbank initialisieren
 npx prisma migrate deploy
 
-    Erstellt automatisch die Datei dev.db
 
-5️⃣ Backend starten
+Erstellt automatisch die Datei dev.db
 
+Backend starten
 npm run start
 
-Backend läuft jetzt auf:
+
+Backend läuft unter:
 
 http://localhost:3000
+
 
 Healthcheck:
 
 GET /health
 
-🖥️ Frontend Setup
-
+Frontend Setup
 cd ../frontend
 npm install
 npm run start
 
-Frontend läuft auf:
+
+Frontend läuft unter:
 
 http://localhost:4200
 
-🔄 Ablauf für User
+Ablauf für User
 Nicht eingeloggt
 
-    Upload möglich
+Upload möglich
 
-    Keine Upload-Liste sichtbar
+Keine Upload-Liste sichtbar
 
-    Kein Download möglich
+Kein Download möglich
 
 GitHub Login
 
-    Uploads sichtbar
+Uploads sichtbar
 
-    Downloads erlaubt
+Downloads erlaubt
 
-    Uploads werden dem User zugeordnet
+Uploads werden dem User zugeordnet
