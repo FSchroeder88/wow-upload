@@ -57,8 +57,11 @@ report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 
 /generated/prisma
 
-uploads/
+apps/backend/uploads/
 dev.db
+
+!apps/backend/src/uploads/
+!apps/backend/src/uploads/**
 
 # SQLite
 *.db
