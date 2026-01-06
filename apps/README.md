@@ -9,7 +9,7 @@ mit **GitHub OAuth Login**, **Upload-Queue** und **Progressbars**.
 
 ---
 
-## ✨ Features
+## Features
 
 - Upload von Dateien:
   - `.pkt`
@@ -28,7 +28,7 @@ mit **GitHub OAuth Login**, **Upload-Queue** und **Progressbars**.
 
 ---
 
-## 🧱 Tech-Stack
+## Tech-Stack
 
 ### Frontend
 - Angular (Standalone Components)
@@ -51,7 +51,7 @@ http://localhost:3000
 
 ---
 
-## 📁 Projektstruktur
+## Projektstruktur
 
 ```text
 sniff-repo/
