@@ -1,4 +1,4 @@
-# WoW Upload – Upload Service
+# W Upload – Upload Service
 
 ![Node](https://img.shields.io/badge/node-%3E%3D18-green)
 ![Angular](https://img.shields.io/badge/angular-standalone-red)
