@@ -7,18 +7,15 @@ services:
       - "3000:3000"
     environment:
       DATABASE_URL: "file:/app/data/dev.db"
-
       GITHUB_CLIENT_ID: "${GITHUB_CLIENT_ID}"
       GITHUB_CLIENT_SECRET: "${GITHUB_CLIENT_SECRET}"
-
       JWT_SECRET: "${JWT_SECRET}"
       JWT_EXPIRES_IN: "${JWT_EXPIRES_IN:-7d}"
-
       FRONTEND_URL: "${FRONTEND_URL:-http://localhost:4200}"
       PORT: "3000"
     volumes:
-      - backend_db:/app/data
-      - backend_uploads:/app/uploads
+      - ./data/db:/app/data
+      - ./data/uploads:/app/uploads
 
   frontend:
     build:
@@ -28,7 +25,3 @@ services:
       - "4200:80"
     depends_on:
       - backend
-
-volumes:
-  backend_db:
-  backend_uploads:

@@ -25,7 +25,7 @@ export type UploadResult = {
 export class UploadsService {
   private readonly apiBase = 'http://localhost:3000';
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient) { }
 
   list(): Observable<UploadListItem[]> {
     return this.http.get<UploadListItem[]>(`${this.apiBase}/uploads`, {
@@ -33,16 +33,16 @@ export class UploadsService {
     });
   }
 
-  uploadFile(file: File): Observable<{ progress: number; done?: UploadResult }> {
+  uploadFile(file: File, clientHash?: string) {
     const form = new FormData();
     form.append('file', file);
+    if (clientHash) form.append('clientHash', clientHash);
 
-    const req = new HttpRequest('POST', `${this.apiBase}/uploads`, form, {
+    return this.http.post(`${this.apiBase}/uploads`, form, {
       reportProgress: true,
-      withCredentials: true, // wichtig: damit Cookie bei eingeloggten mitsendet
-    });
-
-    return this.http.request(req).pipe(
+      observe: 'events',
+      withCredentials: true,
+    }).pipe(
       map((event: HttpEvent<any>) => {
         if (event.type === HttpEventType.UploadProgress) {
           const total = event.total ?? file.size ?? 0;
@@ -60,4 +60,13 @@ export class UploadsService {
   downloadUrl(id: number): string {
     return `${this.apiBase}/uploads/${id}/download`;
   }
+
+  checkHash(hash: string) {
+    return this.http.post<{ exists: boolean }>(
+      `${this.apiBase}/uploads/check-hash`,
+      { hash },
+      { withCredentials: true }
+    );
+  }
+
 }

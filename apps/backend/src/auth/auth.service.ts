@@ -13,7 +13,19 @@ export class AuthService {
   constructor(
     private prisma: PrismaService,
     private jwt: JwtService,
-  ) {}
+  ) { }
+
+  async getUserById(userId: number) {
+    return this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        githubId: true,
+        username: true,
+        avatarUrl: true,
+      },
+    });
+  }
 
   async upsertGithubUser(gh: GithubUser) {
     return this.prisma.user.upsert({

@@ -2,9 +2,16 @@ import { Injectable, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { catchError, of, tap } from 'rxjs';
 
+export type MeUser = {
+  id: number;
+  githubId: string;
+  username: string;
+  avatarUrl: string | null;
+};
+
 export type MeResponse =
   | { authenticated: false }
-  | { authenticated: true; userId: number };
+  | { authenticated: true; user: MeUser };
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -13,7 +20,7 @@ export class AuthService {
   readonly me = signal<MeResponse>({ authenticated: false });
   readonly loading = signal<boolean>(true);
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient) { }
 
   refreshMe() {
     this.loading.set(true);
@@ -30,7 +37,6 @@ export class AuthService {
   }
 
   login() {
-    // OAuth Redirect (Cookie wird im Callback gesetzt)
     window.location.href = `${this.apiBase}/auth/github`;
   }
 

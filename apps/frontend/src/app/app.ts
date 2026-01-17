@@ -2,12 +2,15 @@ import { Component, OnInit, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AuthService } from './core/api/auth.service';
 import { UploadsService, UploadListItem } from './core/api/uploads.service';
+import { createSHA256 } from 'hash-wasm';
+import { firstValueFrom } from 'rxjs';
 
 type QueueItem = {
   file: File;
   progress: number;
-  status: 'queued' | 'uploading' | 'done' | 'error';
+  status: 'queued' | 'hashing' | 'uploading' | 'done' | 'error';
   error?: string;
+  hash?: string;
 };
 
 @Component({
@@ -18,14 +21,24 @@ type QueueItem = {
   styleUrl: './app.scss',
 })
 export class App implements OnInit {
-window: any;
-  constructor(public auth: AuthService, private uploadsApi: UploadsService) {}
+  constructor(public auth: AuthService, private uploadsApi: UploadsService) { }
 
   uploads = signal<UploadListItem[]>([]);
   queue = signal<QueueItem[]>([]);
   uploading = signal<boolean>(false);
 
+
+
   isAuthed = computed(() => this.auth.me().authenticated === true);
+  user = computed(() => {
+    const me = this.auth.me();
+    return me.authenticated ? me.user : null;
+  });
+
+  download(id: number) {
+    window.location.href = this.downloadUrl(id);
+  }
+
 
   private readonly allowed = ['.7z', '.rar', '.zip', '.pkt', '.tar.gz'];
 
@@ -96,9 +109,8 @@ window: any;
           file: f,
           progress: 0,
           status: 'error',
-          error: `File type not allowed (${
-            this.getExt(f.name) || 'unknown'
-          }). Allowed: ${this.allowed.join(', ')}`,
+          error: `File type not allowed (${this.getExt(f.name) || 'unknown'
+            }). Allowed: ${this.allowed.join(', ')}`,
         };
       }
 
@@ -143,35 +155,66 @@ window: any;
     this.uploadOne(nextIndex);
   }
 
-  private uploadOne(index: number) {
+  private async uploadOne(index: number) {
     const item = this.queue()[index];
     if (!item) {
       this.uploading.set(false);
       return;
     }
 
-    this.updateQueue(index, { status: 'uploading', progress: 0, error: undefined });
+    try {
+      // 1) Hashing
+      this.updateQueue(index, { status: 'hashing', progress: 0, error: undefined });
 
-    this.uploadsApi.uploadFile(item.file).subscribe({
-      next: (ev) => {
-        if (typeof ev.progress === 'number') {
-          this.updateQueue(index, { progress: ev.progress });
-        }
-        if (ev.done) {
-          this.updateQueue(index, { status: 'done', progress: 100 });
-          if (this.isAuthed()) this.reloadUploads();
-        }
-      },
-      error: () => {
-        this.updateQueue(index, { status: 'error', error: 'Upload failed' });
+      const hash = await this.sha256File(item.file);
+      this.updateQueue(index, { hash });
+
+      // 2) Check hash exists
+      const existsRes = await firstValueFrom(this.uploadsApi.checkHash(hash));
+      if (existsRes?.exists) {
+        this.updateQueue(index, {
+          status: 'error',
+          error: 'File already exists on server (same SHA-256).',
+        });
         this.uploading.set(false);
         this.startUploadQueue();
-      },
-      complete: () => {
-        this.uploading.set(false);
-        this.startUploadQueue();
-      },
-    });
+        return;
+      }
+
+      // 3) Upload (send clientHash)
+      this.updateQueue(index, { status: 'uploading', progress: 0 });
+
+      this.uploadsApi.uploadFile(item.file, hash).subscribe({
+        next: (ev) => {
+          if (typeof ev.progress === 'number') {
+            this.updateQueue(index, { progress: ev.progress });
+          }
+          if (ev.done) {
+            this.updateQueue(index, { status: 'done', progress: 100 });
+            if (this.isAuthed()) this.reloadUploads();
+          }
+        },
+        error: (err) => {
+          // 409 vom Backend = existiert (Race condition)
+          const msg =
+            err?.status === 409
+              ? 'File already exists on server (race condition).'
+              : 'Upload failed';
+
+          this.updateQueue(index, { status: 'error', error: msg });
+          this.uploading.set(false);
+          this.startUploadQueue();
+        },
+        complete: () => {
+          this.uploading.set(false);
+          this.startUploadQueue();
+        },
+      });
+    } catch (e: any) {
+      this.updateQueue(index, { status: 'error', error: 'Hashing failed' });
+      this.uploading.set(false);
+      this.startUploadQueue();
+    }
   }
 
   private updateQueue(index: number, patch: Partial<QueueItem>) {
@@ -192,4 +235,20 @@ window: any;
   downloadUrl(id: number) {
     return this.uploadsApi.downloadUrl(id);
   }
+
+  private async sha256File(file: File): Promise<string> {
+    const hasher = await createSHA256();
+    const chunkSize = 4 * 1024 * 1024; // 4MB
+    let offset = 0;
+
+    while (offset < file.size) {
+      const slice = file.slice(offset, offset + chunkSize);
+      const buf = await slice.arrayBuffer();
+      hasher.update(new Uint8Array(buf));
+      offset += chunkSize;
+    }
+
+    return hasher.digest('hex');
+  }
+
 }
