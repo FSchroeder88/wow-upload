@@ -1,60 +1,80 @@
-# W Upload – Upload Service
+WoW Upload – Upload Service
 
-![Node](https://img.shields.io/badge/node-%3E%3D18-green)
-![Angular](https://img.shields.io/badge/angular-standalone-red)
-![Auth](https://img.shields.io/badge/auth-GitHub%20OAuth-black)
 
-Webanwendung zum **Hochladen, Verwalten und Herunterladen von Dateien**  
-mit **GitHub OAuth Login**, **Upload-Queue** und **Progressbars**.
 
----
 
-## Features
 
-- Upload von Dateien:
-  - `.pkt`
-  - `.zip`
-  - `.7z`
-  - `.rar`
-  - `.tar.gz`
-- **Upload Queue** mit Fortschrittsanzeige
-- **Anonymer Upload erlaubt**
-- **GitHub Login (OAuth)**
-- Uploads werden (falls eingeloggt) **Usern zugeordnet**
-- **Nur eingeloggte User**:
-  - sehen Uploads
-  - können Dateien herunterladen
-- Dateien werden **lokal auf dem Server gespeichert**
 
----
 
-## Tech-Stack
 
-### Frontend
-- Angular (Standalone Components)
-- Signals
-- HttpClient
-- Standardmäßig erreichbar unter  
+Webanwendung zum Hochladen, Verwalten und Herunterladen von Dateien
+mit GitHub OAuth Login, Upload-Queue, Progressbars und Duplicate-Erkennung (SHA-256).
 
+Features
+
+Upload unterstützter Dateitypen:
+
+.pkt
+
+.zip
+
+.7z
+
+.rar
+
+.tar.gz
+
+Upload Queue mit Fortschrittsanzeige
+
+SHA-256 Hash-Prüfung (verhindert doppelte Uploads)
+
+Anonymer Upload erlaubt
+
+GitHub Login (OAuth)
+
+Uploads werden (falls eingeloggt) GitHub-Usern zugeordnet
+
+Nur eingeloggte User
+
+sehen Uploads
+
+können Dateien herunterladen
+
+Dateien werden lokal auf dem Server gespeichert
+
+Docker-basiertes Deployment (empfohlen)
+
+Tech-Stack
+Frontend
+
+Angular (Standalone Components)
+
+Signals
+
+HttpClient
+
+SHA-256 Hashing im Browser
+
+Läuft standardmäßig unter
 http://localhost:4200
 
+Backend
 
-### Backend
-- NestJS
-- Prisma + SQLite
-- Passport GitHub OAuth
-- JWT Authentication
-- Standardmäßig erreichbar unter  
+NestJS
 
+Prisma
+
+SQLite (lokal / Docker Volume)
+
+Passport GitHub OAuth
+
+JWT Authentication
+
+Läuft standardmäßig unter
 http://localhost:3000
 
-
----
-
-## Projektstruktur
-
-```text
-sniff-repo/
+Projektstruktur
+wow-upload/
 ├── apps/
 │   ├── backend/
 │   │   ├── prisma/
@@ -64,116 +84,155 @@ sniff-repo/
 │   │   │   ├── auth/
 │   │   │   ├── uploads/
 │   │   │   └── main.ts
-│   │   ├── uploads/          # gespeicherte Dateien (lokal)
-│   │   └── dev.db            
+│   │   └── Dockerfile
 │   └── frontend/
 │       ├── src/
 │       │   ├── app/
 │       │   └── main.ts
-│       └── angular.json
+│       └── Dockerfile
+├── data/
+│   ├── db/         # SQLite DB (Docker Volume / Bind)
+│   └── uploads/    # Hochgeladene Dateien
+├── docker-compose.yml
+├── .env.example
 └── README.md
 
-```
+GitHub OAuth Setup
+GitHub OAuth App anlegen
 
-## Authentifizierung (GitHub OAuth)
-### GitHub OAuth App anlegen
+GitHub → Settings → Developer settings → OAuth Apps
 
-- GitHub → Settings → Developer settings → OAuth Apps
-- New OAuth App
-- Einstellungen:
+New OAuth App
 
+Einstellungen:
 
-Application name:
-```text
+Application name
+
 WoW Upload
 
-```
 
-Homepage URL:
-```text
+Homepage URL
+
 http://<SERVER-IP-ODER-DOMAIN>
 
-```
 
-Authorization callback URL:
-```text
+Authorization callback URL
+
 http://<SERVER-IP-ODER-DOMAIN>:3000/auth/github/callback
 
-```
 
-- Client ID und Client Secret kopieren
+Danach Client ID und Client Secret kopieren.
 
-## Backend Setup (Server)
-### Voraussetzungen
+Installation (Docker – empfohlen)
+Voraussetzungen
 
-- Node.js ≥ 18
-- npm
-- Git
+Docker
 
-## Repository klonen
-```text
+Docker Compose
+
+Git
+
+Repository klonen
 git clone https://github.com/FSchroeder88/wow-upload.git
-cd wow-upload/apps/backend
-```
-### Environment Variablen
+cd wow-upload
 
-In apps/backend/.env:
-```text
+Environment Datei anlegen
+cp .env.example .env
+
+
+.env ausfüllen:
+
+# GitHub OAuth
 GITHUB_CLIENT_ID=xxx
-GITHUB_CLIENT_SECRET=xxx
+GITHUB_CLIENT_SECRET=yyy
 
+# Auth
 JWT_SECRET=super-secret-key
 JWT_EXPIRES_IN=7d
 
-FRONTEND_URL=http://<SERVER-IP-ODER-DOMAIN>:4200
-```
+# URLs
+FRONTEND_URL=http://localhost:4200
 
-Hinweis: .env ist nicht im Git und muss manuell erstellt werden.
 
-### Abhängigkeiten installieren
-```text
-npm install
-```
-### Datenbank initialisieren
-```text
-npx prisma migrate deploy
+.env ist nicht im Git und muss manuell erstellt werden.
 
-```
-Erstellt automatisch die Datei dev.db
+Container starten
+docker compose up --build -d
 
-### Backend starten
-```text
-npm run start
-```
 
-Backend läuft unter:
-```text
-http://localhost:3000
-```
+Danach erreichbar unter:
 
-Healthcheck:
-```text
+Frontend → http://localhost:4200
+
+Backend → http://localhost:3000
+
+Daten & Uploads
+
+Uploads werden gespeichert unter:
+
+./data/uploads/
+
+
+Datenbank (SQLite):
+
+./data/db/dev.db
+
+
+Beides bleibt auch nach Container-Neustarts erhalten.
+
+Upload-Workflow (Dedup)
+
+Datei wird im Browser ausgewählt
+
+SHA-256 Hash wird clientseitig berechnet
+
+Backend prüft:
+
+Hash existiert → Upload wird abgebrochen
+
+Hash neu → Upload startet
+
+Server berechnet Hash erneut und speichert:
+
+Dateiname
+
+Größe
+
+Hash
+
+Timestamp
+
+optional GitHub-User
+
+Nutzer-Verhalten
+Nicht eingeloggt
+
+Upload möglich
+
+Keine Upload-Liste sichtbar
+
+Kein Download möglich
+
+Eingeloggt (GitHub)
+
+Eigene Uploads sichtbar
+
+Downloads erlaubt
+
+Uploads werden dem GitHub-Account zugeordnet
+
+Healthcheck
 GET /health
-```
-## Frontend Setup
-```text
-cd ../frontend
+
+Lokale Entwicklung (ohne Docker, optional)
+<details> <summary>Click to expand</summary>
+cd apps/backend
+npm install
+npx prisma migrate dev
+npm run start
+
+cd apps/frontend
 npm install
 npm run start
-```
 
-### Frontend läuft unter:
-```text
-http://localhost:4200
-```
-## Ablauf für User
-### Nicht eingeloggt
-- Upload möglich
-- Keine Upload-Liste sichtbar
-- Kein Download möglich
-
-### GitHub Login
-- Uploads sichtbar
-- Downloads erlaubt
-- Uploads werden dem User zugeordnet
-
+</details>
