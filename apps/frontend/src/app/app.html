@@ -6,15 +6,28 @@
     </div>
 
     <div class="actions">
+      <!-- Nicht eingeloggt -->
       <button class="primary" (click)="auth.login()" *ngIf="!isAuthed()">
         Login with GitHub
       </button>
 
 
-
       <ng-container *ngIf="isAuthed()">
-        <button (click)="reloadUploads()">Refresh</button>
-        <button (click)="onLogout()">Logout</button>
+        <div class="userbox">
+          <img class="avatar" *ngIf="user()?.avatarUrl" [src]="user()?.avatarUrl!" alt="GitHub Avatar" />
+
+          <div class="userinfo">
+            <div class="welcome">
+              Welcome, <strong>{{ user()?.username }}</strong>
+            </div>
+            <div class="subline">Your uploads will be linked to your GitHub account</div>
+          </div>
+
+          <div class="user-actions">
+            <button (click)="reloadUploads()">Refresh</button>
+            <button class="danger" (click)="onLogout()">Logout</button>
+          </div>
+        </div>
       </ng-container>
     </div>
   </header>
@@ -51,7 +64,10 @@
           <span class="name">{{ q.file.name }}</span>
 
           <div class="status">
-            <span class="badge" [class]="q.status">{{ q.status }}</span>
+            <span class="badge" [class]="q.status">
+              <span class="spinner" *ngIf="q.status === 'hashing'"></span>
+              {{ q.status }}
+            </span>
 
             <button class="remove" *ngIf="q.status !== 'uploading'" (click)="removeFromQueue(i)"
               title="Remove from queue">
@@ -78,9 +94,8 @@
         <span class="meta">{{ u.size }} bytes</span>
       </div>
 
-      <button class="dl" (click)="window.location.href = downloadUrl(u.id)">
-        Download
-      </button>
+      <button class="dl" (click)="download(u.id)">Download</button>
+
     </div>
   </section>
 

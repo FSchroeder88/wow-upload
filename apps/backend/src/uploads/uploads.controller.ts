@@ -1,4 +1,5 @@
 import {
+  Body,
   Controller,
   Get,
   Param,
@@ -24,8 +25,15 @@ export class UploadsController {
   constructor(
     private uploads: UploadsService,
     private auth: AuthService,
-  ) {}
+  ) { }
 
+  @Post('check-hash')
+  async checkHash(@Body() body: { hash: string }) {
+    const hash = (body?.hash ?? '').toLowerCase().trim();
+    return this.uploads.checkHashExists(hash);
+  }
+
+  // anonym erlaubt
   @Post()
   @UseInterceptors(
     FileInterceptor('file', {
@@ -33,9 +41,13 @@ export class UploadsController {
       limits: { fileSize: 2 * 1024 * 1024 * 1024 },
     }),
   )
-  async upload(@UploadedFile() file: Express.Multer.File, @Req() req: Request) {
+  async upload(
+    @UploadedFile() file: Express.Multer.File,
+    @Body('clientHash') clientHash: string | undefined,
+    @Req() req: Request,
+  ) {
     const userId = getOptionalUserId(req, this.auth);
-    return this.uploads.storeFile(file, userId);
+    return this.uploads.storeFile(file, userId, clientHash);
   }
 
   @Get()
@@ -59,3 +71,4 @@ export class UploadsController {
     res.sendFile(info.fullPath);
   }
 }
+

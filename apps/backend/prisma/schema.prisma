@@ -19,12 +19,15 @@ model User {
 
 model Upload {
   id           Int      @id @default(autoincrement())
+
+  uploaderId   Int?
+  uploader     User?    @relation(fields: [uploaderId], references: [id])
+
   originalName String
   storageName  String   @unique
   mimeType     String
-  size         Int
-  createdAt    DateTime @default(now())
+  size         Int      // für SQLite ok; später für sehr große Dateien -> BigInt
+  hash         String   @unique
 
-  uploader     User?    @relation(fields: [uploaderId], references: [id])
-  uploaderId   Int?
+  createdAt    DateTime @default(now())
 }

@@ -3,9 +3,15 @@ import { AuthGuard } from '@nestjs/passport';
 import type { Request, Response } from 'express';
 
 import { AuthService } from './auth.service';
-import type { GithubProfileUser } from './github.strategy';
 
-type RequestWithUser = Request & { user?: GithubProfileUser };
+type DbUser = {
+  id: number;
+  githubId: string;
+  username: string;
+  avatarUrl: string | null;
+};
+
+type RequestWithUser = Request & { user?: DbUser };
 
 function readCookieToken(req: Request): string | undefined {
   const cookies = req.cookies as unknown;
@@ -22,7 +28,6 @@ export class AuthController {
   @Get('github')
   @UseGuards(AuthGuard('github'))
   githubLogin(): void {
-    // redirect handled by passport
   }
 
   @Get('github/callback')
@@ -31,19 +36,18 @@ export class AuthController {
     @Req() req: RequestWithUser,
     @Res() res: Response,
   ): Promise<void> {
-    const ghUser = req.user;
-    if (!ghUser) {
+    const user = req.user; 
+    if (!user) {
       res.status(401).send('Auth failed');
       return;
     }
 
-    const user = await this.auth.upsertGithubUser(ghUser);
     const token = this.auth.signToken({ userId: user.id });
 
     res.cookie('auth_token', token, {
       httpOnly: true,
       sameSite: 'lax',
-      secure: false, // lokal; später https => true
+      secure: false, 
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
@@ -51,13 +55,25 @@ export class AuthController {
   }
 
   @Get('me')
-  me(@Req() req: Request) {
+  async me(@Req() req: Request) {
     const token = readCookieToken(req);
     if (!token) return { authenticated: false };
 
     try {
       const payload = this.auth.verifyToken(token);
-      return { authenticated: true, userId: payload.userId };
+
+      const user = await this.auth.getUserById(payload.userId);
+      if (!user) return { authenticated: false };
+
+      return {
+        authenticated: true,
+        user: {
+          id: user.id,
+          username: user.username,
+          avatarUrl: user.avatarUrl,
+          githubId: user.githubId,
+        },
+      };
     } catch {
       return { authenticated: false };
     }

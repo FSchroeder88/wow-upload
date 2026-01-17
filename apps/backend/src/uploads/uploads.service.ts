@@ -1,10 +1,11 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { randomUUID } from 'crypto';
+import { createHash, randomUUID } from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -30,7 +31,7 @@ export type UploadListItem = {
 
 @Injectable()
 export class UploadsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
 
   private validateFile(file: Express.Multer.File | undefined): string {
     if (!file) throw new BadRequestException('No file provided');
@@ -42,6 +43,7 @@ export class UploadsService {
       );
     }
 
+    // Wenn ihr "kein Limit" wollt, diesen Block entfernen.
     const maxBytes = 2 * 1024 * 1024 * 1024; // 2GB
     if (file.size > maxBytes) {
       throw new BadRequestException('File too large (max 2GB)');
@@ -50,9 +52,24 @@ export class UploadsService {
     return ext;
   }
 
+  async checkHashExists(hash: string) {
+    const normalized = (hash ?? '').toLowerCase().trim();
+    if (!/^[a-f0-9]{64}$/.test(normalized)) {
+      return { exists: false };
+    }
+
+    const existing = await this.prisma.upload.findUnique({
+      where: { hash: normalized },
+      select: { id: true },
+    });
+
+    return { exists: !!existing };
+  }
+
   async storeFile(
-    file: Express.Multer.File | undefined,
+    file: Express.Multer.File,
     uploaderId?: number | null,
+    clientHash?: string,
   ): Promise<UploadListItem> {
     ensureUploadDir();
 
@@ -60,25 +77,64 @@ export class UploadsService {
     const storageName = `${randomUUID()}${ext}`;
     const fullPath = path.join(UPLOAD_DIR, storageName);
 
-    await fs.promises.writeFile(fullPath, file!.buffer);
+    const normalizedClientHash = (clientHash ?? '').toLowerCase().trim();
+    if (normalizedClientHash && !/^[a-f0-9]{64}$/.test(normalizedClientHash)) {
+      throw new BadRequestException('Invalid clientHash (expected sha256 hex)');
+    }
 
-    const record = await this.prisma.upload.create({
-      data: {
-        originalName: file!.originalname,
-        storageName,
-        mimeType: file!.mimetype ?? 'application/octet-stream',
-        size: file!.size,
-        uploaderId: uploaderId ?? null,
-      },
-      select: {
-        id: true,
-        originalName: true,
-        size: true,
-        createdAt: true,
-      },
+    // Server-side SHA-256 (trust no one)
+    const serverHash = createHash('sha256').update(file.buffer).digest('hex');
+
+    // Integrity check (optional but requested)
+    if (normalizedClientHash && normalizedClientHash !== serverHash) {
+      throw new BadRequestException('Hash mismatch');
+    }
+
+    // Early exists check for friendly error
+    const preExisting = await this.prisma.upload.findUnique({
+      where: { hash: serverHash },
+      select: { id: true },
     });
+    if (preExisting) {
+      throw new ConflictException('File already exists');
+    }
 
-    return record;
+    // Write file to disk
+    await fs.promises.writeFile(fullPath, file.buffer);
+
+    try {
+      const record = await this.prisma.upload.create({
+        data: {
+          originalName: file.originalname,
+          storageName,
+          mimeType: file.mimetype ?? 'application/octet-stream',
+          size: file.size,
+          uploaderId: uploaderId ?? null,
+          hash: serverHash,
+        },
+        select: {
+          id: true,
+          originalName: true,
+          size: true,
+          createdAt: true,
+        },
+      });
+
+      return record;
+    } catch (e: any) {
+
+      try {
+        await fs.promises.unlink(fullPath);
+      } catch {
+        // ignore
+      }
+
+      if (e?.code === 'P2002') {
+        throw new ConflictException('File already exists');
+      }
+
+      throw e;
+    }
   }
 
   async listUploads(): Promise<UploadListItem[]> {
@@ -104,8 +160,9 @@ export class UploadsService {
     if (!upload) throw new NotFoundException('Upload not found');
 
     const fullPath = path.join(process.cwd(), 'uploads', upload.storageName);
-    if (!fs.existsSync(fullPath))
+    if (!fs.existsSync(fullPath)) {
       throw new NotFoundException('File missing on disk');
+    }
 
     return { originalName: upload.originalName, fullPath };
   }
