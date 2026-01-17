@@ -1,79 +1,55 @@
-WoW Upload – Upload Service
+# WoW Upload – Upload Service
 
+Webanwendung zum **Hochladen, Verwalten und Herunterladen von Dateien**  
+mit **GitHub OAuth Login**, **Upload-Queue**, **Progressbars** und **Duplicate-Erkennung (SHA-256)**.
 
+---
 
+## Features
 
+- Upload unterstützter Dateitypen:
+  - `.pkt`
+  - `.zip`
+  - `.7z`
+  - `.rar`
+  - `.tar.gz`
+- **Upload-Queue** mit Fortschrittsanzeige
+- **SHA-256 Hash-Prüfung** (verhindert doppelte Uploads)
+- **Anonymer Upload erlaubt**
+- **GitHub Login (OAuth)**
+- Uploads werden (falls eingeloggt) **GitHub-Usern zugeordnet**
+- **Nur eingeloggte User**
+  - sehen Uploads
+  - können Dateien herunterladen
+- Dateien werden **lokal auf dem Server gespeichert**
+- **Docker-basiertes Deployment (empfohlen)**
 
+---
 
+## Tech-Stack
 
+### Frontend
+- Angular (Standalone Components)
+- Signals
+- HttpClient
+- SHA-256 Hashing im Browser  
+- Standardmäßig erreichbar unter:  
+  http://localhost:4200
 
-Webanwendung zum Hochladen, Verwalten und Herunterladen von Dateien
-mit GitHub OAuth Login, Upload-Queue, Progressbars und Duplicate-Erkennung (SHA-256).
+### Backend
+- NestJS
+- Prisma
+- SQLite (lokal / Docker Volume)
+- Passport GitHub OAuth
+- JWT Authentication  
+- Standardmäßig erreichbar unter:  
+  http://localhost:3000
 
-Features
+---
 
-Upload unterstützter Dateitypen:
+## Projektstruktur
 
-.pkt
-
-.zip
-
-.7z
-
-.rar
-
-.tar.gz
-
-Upload Queue mit Fortschrittsanzeige
-
-SHA-256 Hash-Prüfung (verhindert doppelte Uploads)
-
-Anonymer Upload erlaubt
-
-GitHub Login (OAuth)
-
-Uploads werden (falls eingeloggt) GitHub-Usern zugeordnet
-
-Nur eingeloggte User
-
-sehen Uploads
-
-können Dateien herunterladen
-
-Dateien werden lokal auf dem Server gespeichert
-
-Docker-basiertes Deployment (empfohlen)
-
-Tech-Stack
-Frontend
-
-Angular (Standalone Components)
-
-Signals
-
-HttpClient
-
-SHA-256 Hashing im Browser
-
-Läuft standardmäßig unter
-http://localhost:4200
-
-Backend
-
-NestJS
-
-Prisma
-
-SQLite (lokal / Docker Volume)
-
-Passport GitHub OAuth
-
-JWT Authentication
-
-Läuft standardmäßig unter
-http://localhost:3000
-
-Projektstruktur
+```text
 wow-upload/
 ├── apps/
 │   ├── backend/
@@ -91,57 +67,55 @@ wow-upload/
 │       │   └── main.ts
 │       └── Dockerfile
 ├── data/
-│   ├── db/         # SQLite DB (Docker Volume / Bind)
-│   └── uploads/    # Hochgeladene Dateien
+│   ├── db/
+│   └── uploads/
 ├── docker-compose.yml
 ├── .env.example
 └── README.md
+```
 
-GitHub OAuth Setup
-GitHub OAuth App anlegen
+---
 
-GitHub → Settings → Developer settings → OAuth Apps
+## GitHub OAuth Setup
 
+### GitHub OAuth App anlegen
+
+GitHub → Settings → Developer settings → OAuth Apps  
 New OAuth App
 
-Einstellungen:
-
-Application name
-
+**Application name**
 WoW Upload
 
-
-Homepage URL
-
+**Homepage URL**
 http://<SERVER-IP-ODER-DOMAIN>
 
-
-Authorization callback URL
-
+**Authorization callback URL**
 http://<SERVER-IP-ODER-DOMAIN>:3000/auth/github/callback
 
+Client ID und Client Secret kopieren.
 
-Danach Client ID und Client Secret kopieren.
+---
 
-Installation (Docker – empfohlen)
-Voraussetzungen
+## Installation (Docker – empfohlen)
 
-Docker
+### Voraussetzungen
+- Docker
+- Docker Compose
+- Git
 
-Docker Compose
-
-Git
-
-Repository klonen
+### Repository klonen
+```bash
 git clone https://github.com/FSchroeder88/wow-upload.git
 cd wow-upload
+```
 
-Environment Datei anlegen
+### Environment Datei anlegen
+```bash
 cp .env.example .env
+```
 
-
-.env ausfüllen:
-
+### .env ausfüllen
+```env
 # GitHub OAuth
 GITHUB_CLIENT_ID=xxx
 GITHUB_CLIENT_SECRET=yyy
@@ -152,87 +126,55 @@ JWT_EXPIRES_IN=7d
 
 # URLs
 FRONTEND_URL=http://localhost:4200
+```
 
+---
 
-.env ist nicht im Git und muss manuell erstellt werden.
-
-Container starten
+### Container starten
+```bash
 docker compose up --build -d
+```
 
+---
 
-Danach erreichbar unter:
+## Erreichbarkeit
 
-Frontend → http://localhost:4200
+Frontend: http://localhost:4200  
+Backend: http://localhost:3000  
 
-Backend → http://localhost:3000
+---
 
-Daten & Uploads
+## Daten & Uploads
 
-Uploads werden gespeichert unter:
-
+Uploads:
 ./data/uploads/
 
-
-Datenbank (SQLite):
-
+Datenbank:
 ./data/db/dev.db
 
+---
 
-Beides bleibt auch nach Container-Neustarts erhalten.
+## Upload-Workflow (Duplicate-Erkennung)
 
-Upload-Workflow (Dedup)
+1. Datei im Browser auswählen  
+2. SHA-256 Hash clientseitig berechnen  
+3. Backend prüft Hash  
+4. Upload wird gespeichert inkl. Metadaten  
 
-Datei wird im Browser ausgewählt
+---
 
-SHA-256 Hash wird clientseitig berechnet
+##  Nutzer-Verhalten
 
-Backend prüft:
+### Nicht eingeloggt
+- Upload möglich
+- Keine Upload-Liste
+- Kein Download
 
-Hash existiert → Upload wird abgebrochen
+### Eingeloggt
+- Upload-Liste sichtbar
+- Downloads erlaubt
 
-Hash neu → Upload startet
+---
 
-Server berechnet Hash erneut und speichert:
-
-Dateiname
-
-Größe
-
-Hash
-
-Timestamp
-
-optional GitHub-User
-
-Nutzer-Verhalten
-Nicht eingeloggt
-
-Upload möglich
-
-Keine Upload-Liste sichtbar
-
-Kein Download möglich
-
-Eingeloggt (GitHub)
-
-Eigene Uploads sichtbar
-
-Downloads erlaubt
-
-Uploads werden dem GitHub-Account zugeordnet
-
-Healthcheck
+## Healthcheck
 GET /health
-
-Lokale Entwicklung (ohne Docker, optional)
-<details> <summary>Click to expand</summary>
-cd apps/backend
-npm install
-npx prisma migrate dev
-npm run start
-
-cd apps/frontend
-npm install
-npm run start
-
-</details>
