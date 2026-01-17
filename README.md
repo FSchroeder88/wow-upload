@@ -3,6 +3,10 @@
 Webanwendung zum **Hochladen, Verwalten und Herunterladen von Dateien**  
 mit **GitHub OAuth Login**, **Upload-Queue**, **Progressbars** und **Duplicate-Erkennung (SHA-256)**.
 
+> **Wichtig:**  
+> Dieses Projekt benötigt Environment-Variablen.  
+> Eine vollständige Vorlage findest du in der Datei **`.env.example`**.
+
 ---
 
 ## Features
@@ -34,7 +38,7 @@ mit **GitHub OAuth Login**, **Upload-Queue**, **Progressbars** und **Duplicate-E
 - HttpClient
 - SHA-256 Hashing im Browser  
 - Standardmäßig erreichbar unter:  
-  http://localhost:4200
+    http://localhost:4200
 
 ### Backend
 - NestJS
@@ -43,7 +47,7 @@ mit **GitHub OAuth Login**, **Upload-Queue**, **Progressbars** und **Duplicate-E
 - Passport GitHub OAuth
 - JWT Authentication  
 - Standardmäßig erreichbar unter:  
-  http://localhost:3000
+    http://localhost:3000
 
 ---
 
@@ -67,8 +71,8 @@ wow-upload/
 │       │   └── main.ts
 │       └── Dockerfile
 ├── data/
-│   ├── db/
-│   └── uploads/
+│   ├── db/         # SQLite DB (Docker Volume / Bind)
+│   └── uploads/    # Hochgeladene Dateien
 ├── docker-compose.yml
 ├── .env.example
 └── README.md
@@ -80,19 +84,26 @@ wow-upload/
 
 ### GitHub OAuth App anlegen
 
-GitHub → Settings → Developer settings → OAuth Apps  
-New OAuth App
+1. GitHub → **Settings** → **Developer settings** → **OAuth Apps**
+2. **New OAuth App**
+3. Einstellungen:
 
 **Application name**
+```text
 WoW Upload
+```
 
 **Homepage URL**
+```text
 http://<SERVER-IP-ODER-DOMAIN>
+```
 
 **Authorization callback URL**
+```text
 http://<SERVER-IP-ODER-DOMAIN>:3000/auth/github/callback
+```
 
-Client ID und Client Secret kopieren.
+Danach **Client ID** und **Client Secret** kopieren. Erläuterung in der .env.example.
 
 ---
 
@@ -109,12 +120,21 @@ git clone https://github.com/FSchroeder88/wow-upload.git
 cd wow-upload
 ```
 
-### Environment Datei anlegen
+---
+
+## Environment Variablen
+
+Alle benötigten Environment-Variablen sind in der Datei **`.env.example`** dokumentiert.
+
+### Environment-Datei anlegen
 ```bash
 cp .env.example .env
 ```
 
-### .env ausfüllen
+### `.env` ausfüllen
+
+Öffne anschließend die `.env` Datei und trage deine Werte ein.
+
 ```env
 # GitHub OAuth
 GITHUB_CLIENT_ID=xxx
@@ -128,53 +148,92 @@ JWT_EXPIRES_IN=7d
 FRONTEND_URL=http://localhost:4200
 ```
 
+> Hinweis:
+> - `.env.example` dient **nur als Vorlage**
+> - `.env` ist **nicht im Git enthalten** und muss lokal erstellt werden
+
 ---
 
-### Container starten
+## Container starten
+
 ```bash
 docker compose up --build -d
 ```
 
----
+Danach erreichbar unter:
 
-## Erreichbarkeit
-
-Frontend: http://localhost:4200  
-Backend: http://localhost:3000  
+- Frontend → http://localhost:4200
+- Backend → http://localhost:3000
 
 ---
 
 ## Daten & Uploads
 
-Uploads:
+**Uploads:**
+```text
 ./data/uploads/
+```
 
-Datenbank:
+**Datenbank (SQLite):**
+```text
 ./data/db/dev.db
+```
+
+Beides bleibt auch nach Container-Neustarts erhalten.
 
 ---
 
-## Upload-Workflow (Duplicate-Erkennung)
+## Upload-Workflow (Dedup)
 
-1. Datei im Browser auswählen  
-2. SHA-256 Hash clientseitig berechnen  
-3. Backend prüft Hash  
-4. Upload wird gespeichert inkl. Metadaten  
+1. Datei wird im Browser ausgewählt
+2. SHA-256 Hash wird **clientseitig** berechnet
+3. Backend prüft:
+   - Hash existiert → Upload wird abgebrochen
+   - Hash neu → Upload startet
+4. Server berechnet Hash erneut und speichert:
+   - Dateiname
+   - Größe
+   - Hash
+   - Timestamp
+   - optional GitHub-User
 
 ---
 
-##  Nutzer-Verhalten
+## Nutzer-Verhalten
 
 ### Nicht eingeloggt
 - Upload möglich
-- Keine Upload-Liste
-- Kein Download
+- Keine Upload-Liste sichtbar
+- Kein Download möglich
 
-### Eingeloggt
-- Upload-Liste sichtbar
+### Eingeloggt (GitHub)
+- Eigene Uploads sichtbar
 - Downloads erlaubt
+- Uploads werden dem GitHub-Account zugeordnet
 
 ---
 
 ## Healthcheck
+
+```http
 GET /health
+```
+
+---
+
+## Lokale Entwicklung (ohne Docker, optional)
+
+<details>
+<summary>Click to expand</summary>
+
+```bash
+cd apps/backend
+npm install
+npx prisma migrate dev
+npm run start
+
+cd ../frontend
+npm install
+npm run start
+```
+</details>
