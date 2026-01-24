@@ -1,27 +1,50 @@
 services:
+  db:
+    image: postgres:16-alpine
+    container_name: wow-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: wowupload
+      POSTGRES_USER: wowupload
+      POSTGRES_PASSWORD: wowupload_pw
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
   backend:
     build:
       context: ./apps/backend
     container_name: wow-backend
+    depends_on:
+      - db
     ports:
       - "3000:3000"
     environment:
-      DATABASE_URL: "file:/app/data/dev.db"
+      # Prisma DB URL (Postgres in Docker Netzwerk)
+      DATABASE_URL: "postgresql://wowupload:wowupload_pw@db:5432/wowupload?schema=public"
+
       GITHUB_CLIENT_ID: "${GITHUB_CLIENT_ID}"
       GITHUB_CLIENT_SECRET: "${GITHUB_CLIENT_SECRET}"
+
       JWT_SECRET: "${JWT_SECRET}"
       JWT_EXPIRES_IN: "${JWT_EXPIRES_IN:-7d}"
+
       FRONTEND_URL: "${FRONTEND_URL:-http://localhost:4200}"
       PORT: "3000"
     volumes:
-      - ./data/db:/app/data
-      - ./data/uploads:/app/uploads
+      - backend_uploads:/app/uploads
+    
 
   frontend:
     build:
       context: ./apps/frontend
     container_name: wow-frontend
-    ports:
-      - "4200:80"
     depends_on:
       - backend
+    ports:
+      - "4200:80"
+
+volumes:
+  pg_data:
+  backend_uploads:

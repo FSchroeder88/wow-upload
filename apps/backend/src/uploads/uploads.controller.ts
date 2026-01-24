@@ -10,6 +10,7 @@ import {
   UploadedFile,
   UseGuards,
   UseInterceptors,
+  Query
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
@@ -52,8 +53,13 @@ export class UploadsController {
 
   @Get()
   @UseGuards(JwtAuthGuard)
-  async list(): Promise<UploadListItem[]> {
-    return this.uploads.listUploads();
+  async list(
+    @Query('page') page = '1',
+    @Query('pageSize') pageSize = '25',
+  ): Promise<{ items: UploadListItem[]; total: number; page: number; pageSize: number }> {
+    const p = Math.max(1, parseInt(page, 10) || 1);
+    const ps = Math.min(100, Math.max(1, parseInt(pageSize, 10) || 25));
+    return this.uploads.listUploadsPaged(p, ps);
   }
 
   @Get(':id/download')

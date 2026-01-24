@@ -35,4 +35,5 @@ RUN mkdir -p /app/uploads /app/data
 EXPOSE 3000
 
 # IMPORTANT: generate im runtime + migrate + start
-CMD sh -c "npx prisma generate && npx prisma migrate deploy && node dist/src/main.js"
+CMD sh -c "npx prisma generate && npx prisma migrate deploy && if [ -f dist/main.js ]; then node dist/main.js; else node dist/src/main.js; fi"
+

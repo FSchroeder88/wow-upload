@@ -65,8 +65,7 @@
 
           <div class="status">
             <span class="badge" [class]="q.status">
-              <span class="spinner" *ngIf="q.status === 'hashing'"></span>
-              {{ q.status }}
+              {{ q.status === 'hashing' ? 'hashing…' : q.status === 'checking' ? 'checking…' : q.status }}
             </span>
 
             <button class="remove" *ngIf="q.status !== 'uploading'" (click)="removeFromQueue(i)"
@@ -91,11 +90,24 @@
     <div class="upload-item" *ngFor="let u of uploads()">
       <div class="row">
         <span class="name">{{ u.originalName }}</span>
-        <span class="meta">{{ u.size }} bytes</span>
+
+        <div class="meta">
+          <span>{{ formatMB(u.size) }} MB</span>
+
+          <span class="hashline">
+            SHA-256:
+            <span class="badge queued hash">{{ u.hash }}</span>
+          </span>
+        </div>
       </div>
 
       <button class="dl" (click)="download(u.id)">Download</button>
+    </div>
 
+    <div class="paging" *ngIf="totalPages() > 1">
+      <button (click)="prevPage()" [disabled]="page() <= 1">Prev</button>
+      <span>Page {{ page() }} / {{ totalPages() }} ({{ total() }} total)</span>
+      <button (click)="nextPage()" [disabled]="page() >= totalPages()">Next</button>
     </div>
   </section>
 

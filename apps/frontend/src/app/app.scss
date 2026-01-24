@@ -100,6 +100,27 @@
   min-width: 220px;
 }
 
+.meta {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  opacity: 0.9;
+}
+
+.hashline {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.badge.hash {
+  max-width: 520px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+}
+
 .welcome {
   font-size: 14px;
   line-height: 1.2;
@@ -255,6 +276,17 @@ button.danger {
   .badge.hashing {
     background: rgba(245, 158, 11, 0.2);
     color: #fcd34d;
+  }
+
+  .badge.hash {
+    margin-left: 10px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    opacity: 0.95;
+  }
+
+  .badge.hashing,
+  .badge.checking {
+    opacity: 0.85;
   }
 
   button.remove {

@@ -26,7 +26,16 @@ export type UploadListItem = {
   id: number;
   originalName: string;
   size: number;
+  hash: string;
   createdAt: Date;
+};
+
+export type UploadListResponse = {
+  items: UploadListItem[];
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
 };
 
 @Injectable()
@@ -71,7 +80,20 @@ export class UploadsService {
     uploaderId?: number | null,
     clientHash?: string,
   ): Promise<UploadListItem> {
-    ensureUploadDir();
+    ensureUploadDir()
+    const safeUploaderId =
+      typeof uploaderId === 'number' && Number.isInteger(uploaderId) && uploaderId > 0
+        ? uploaderId
+        : null;
+    let finalUploaderId: number | null = safeUploaderId;
+
+    if (finalUploaderId !== null) {
+      const exists = await this.prisma.user.findUnique({
+        where: { id: finalUploaderId },
+        select: { id: true },
+      });
+      if (!exists) finalUploaderId = null;
+    }
 
     const ext = this.validateFile(file);
     const storageName = `${randomUUID()}${ext}`;
@@ -117,6 +139,7 @@ export class UploadsService {
           originalName: true,
           size: true,
           createdAt: true,
+          hash: true,
         },
       });
 
@@ -137,16 +160,57 @@ export class UploadsService {
     }
   }
 
-  async listUploads(): Promise<UploadListItem[]> {
-    return this.prisma.upload.findMany({
-      orderBy: { createdAt: 'desc' },
-      select: {
-        id: true,
-        originalName: true,
-        size: true,
-        createdAt: true,
-      },
-    });
+  async listUploads(page = 1, pageSize = 25): Promise<UploadListResponse> {
+    const safePageSize = Math.min(Math.max(pageSize, 1), 100);
+    const safePage = Math.max(page, 1);
+
+    const [total, items] = await this.prisma.$transaction([
+      this.prisma.upload.count(),
+      this.prisma.upload.findMany({
+        orderBy: { createdAt: 'desc' },
+        skip: (safePage - 1) * safePageSize,
+        take: safePageSize,
+        select: {
+          id: true,
+          originalName: true,
+          size: true,
+          hash: true,
+          createdAt: true,
+        },
+      }),
+    ]);
+
+    const totalPages = Math.max(1, Math.ceil(total / safePageSize));
+
+    return {
+      items,
+      page: safePage,
+      pageSize: safePageSize,
+      total,
+      totalPages,
+    };
+  }
+
+  async listUploadsPaged(page: number, pageSize: number) {
+    const skip = (page - 1) * pageSize;
+
+    const [total, items] = await Promise.all([
+      this.prisma.upload.count(),
+      this.prisma.upload.findMany({
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: pageSize,
+        select: {
+          id: true,
+          originalName: true,
+          size: true,
+          createdAt: true,
+          hash: true,
+        },
+      }),
+    ]);
+
+    return { items, total, page, pageSize };
   }
 
   async getDownloadInfo(
