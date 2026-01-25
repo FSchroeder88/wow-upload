@@ -90,19 +90,21 @@
     <div class="upload-item" *ngFor="let u of uploads()">
       <div class="row">
         <span class="name">{{ u.originalName }}</span>
-
-        <div class="meta">
-          <span>{{ formatMB(u.size) }} MB</span>
-
-          <span class="hashline">
-            SHA-256:
-            <span class="badge queued hash">{{ u.hash }}</span>
-          </span>
-        </div>
+        <span class="meta">{{ formatMB(u.size) }}</span>
       </div>
 
-      <button class="dl" (click)="download(u.id)">Download</button>
+      <div class="row row-actions">
+        <button class="dl" (click)="download(u.id)">Download</button>
+
+        <span class="hashline">
+          SHA-256:
+          <span class="badge queued" [title]="u.hash">
+            {{ u.hash.slice(0, 12) }}…
+          </span>
+        </span>
+      </div>
     </div>
+
 
     <div class="paging" *ngIf="totalPages() > 1">
       <button (click)="prevPage()" [disabled]="page() <= 1">Prev</button>
@@ -113,7 +115,15 @@
 
   <ng-template #loginHint>
     <section class="card">
-      <h2>Uploads</h2>
+      <div class="uploads-header">
+        <h2>Uploads</h2>
+
+        <div class="pager" *ngIf="totalUploads() > 0">
+          <button (click)="prevPage()" [disabled]="page() <= 1">Prev</button>
+          <span>Page {{ page() }} / {{ totalPages() }}</span>
+          <button (click)="nextPage()" [disabled]="page() >= totalPages()">Next</button>
+        </div>
+      </div>
       <p>You must be logged in to view or download uploads.</p>
     </section>
   </ng-template>

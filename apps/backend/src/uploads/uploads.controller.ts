@@ -10,7 +10,8 @@ import {
   UploadedFile,
   UseGuards,
   UseInterceptors,
-  Query
+  Query,
+  ForbiddenException
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
@@ -20,6 +21,8 @@ import { UploadsService, UploadListItem } from './uploads.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AuthService } from '../auth/auth.service';
 import { getOptionalUserId } from '../auth/optional-auth.util';
+import type { AuthedRequest } from '../auth/jwt-auth.guard';
+
 
 @Controller('uploads')
 export class UploadsController {
@@ -34,7 +37,6 @@ export class UploadsController {
     return this.uploads.checkHashExists(hash);
   }
 
-  // anonym erlaubt
   @Post()
   @UseInterceptors(
     FileInterceptor('file', {
@@ -54,27 +56,42 @@ export class UploadsController {
   @Get()
   @UseGuards(JwtAuthGuard)
   async list(
-    @Query('page') page = '1',
-    @Query('pageSize') pageSize = '25',
-  ): Promise<{ items: UploadListItem[]; total: number; page: number; pageSize: number }> {
-    const p = Math.max(1, parseInt(page, 10) || 1);
-    const ps = Math.min(100, Math.max(1, parseInt(pageSize, 10) || 25));
-    return this.uploads.listUploadsPaged(p, ps);
+  @Req() req: AuthedRequest,
+  @Query('page') page = '1',
+  @Query('pageSize') pageSize = '25',
+): Promise<{ items: UploadListItem[]; total: number; page: number; pageSize: number }> {
+  const p = Math.max(1, parseInt(page, 10) || 1);
+  const ps = Math.min(100, Math.max(1, parseInt(pageSize, 10) || 25));
+
+  const userId = req.userId as number;
+  const user = await this.auth.getUserById(userId);
+  if (!user) {
+    // sollte durch JwtAuthGuard eigentlich nie passieren
+    return { items: [], total: 0, page: p, pageSize: ps };
   }
+
+  const isAdmin = user.role === 'ADMIN';
+  return this.uploads.listUploadsPaged(p, ps, { userId, isAdmin });
+}
 
   @Get(':id/download')
   @UseGuards(JwtAuthGuard)
-  async download(
-    @Param('id', ParseIntPipe) id: number,
-    @Res() res: Response,
-  ): Promise<void> {
-    const info = await this.uploads.getDownloadInfo(id);
-
-    res.setHeader(
-      'Content-Disposition',
-      `attachment; filename="${info.originalName}"`,
-    );
-    res.sendFile(info.fullPath);
+async download(
+  @Param('id', ParseIntPipe) id: number,
+  @Req() req: AuthedRequest,
+  @Res() res: Response,
+): Promise<void> {
+  const userId = req.userId as number;
+  const user = await this.auth.getUserById(userId);
+  if (!user) {
+    throw new ForbiddenException();
   }
+
+  const isAdmin = user.role === 'ADMIN';
+  const info = await this.uploads.getDownloadInfo(id, { userId, isAdmin });
+
+  res.setHeader('Content-Disposition', `attachment; filename="${info.originalName}"`);
+  res.sendFile(info.fullPath);
+}
 }
 

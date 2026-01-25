@@ -3,6 +3,7 @@ import { AuthGuard } from '@nestjs/passport';
 import type { Request, Response } from 'express';
 
 import { AuthService } from './auth.service';
+import { Role } from '@prisma/client';
 
 type DbUser = {
   id: number;
@@ -72,6 +73,7 @@ export class AuthController {
           username: user.username,
           avatarUrl: user.avatarUrl,
           githubId: user.githubId,
+          role: user.role,
         },
       };
     } catch {

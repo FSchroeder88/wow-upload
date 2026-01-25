@@ -28,9 +28,13 @@ export class App implements OnInit {
 
   // ---- UI State (Signals) ----
   uploads = signal<UploadListItem[]>([]);
+  totalUploads = signal<number>(0);
   page = signal<number>(1);
   pageSize = signal<number>(25);
-  totalPages = signal<number>(1);
+
+  totalPages = computed(() =>
+    Math.max(1, Math.ceil(this.totalUploads() / this.pageSize()))
+  );
   total = signal<number>(0);
   queue = signal<QueueItem[]>([]);
   uploading = signal<boolean>(false);
@@ -107,9 +111,9 @@ export class App implements OnInit {
   // Helpers: UI Formatierung
   // -----------------------------------------
   formatMB(bytes: number): string {
-    // Wichtig: "MB" groß, 2 Nachkommastellen
-    return (bytes / (1024 * 1024)).toFixed(2);
+    return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
   }
+
 
   // -----------------------------------------
   // Queue: Add/Remove/Clear
@@ -143,6 +147,19 @@ export class App implements OnInit {
     });
 
     this.queue.set([...this.queue(), ...mapped]);
+  }
+
+  shortHash(hash: string) {
+    if (!hash) return '';
+    return hash.slice(0, 10) + '…' + hash.slice(-10);
+  }
+
+  async copyHash(hash: string) {
+    try {
+      await navigator.clipboard.writeText(hash);
+    } catch {
+      // fallback optional
+    }
   }
 
   removeFromQueue(index: number) {
@@ -259,31 +276,35 @@ export class App implements OnInit {
   // -----------------------------------------
   // Upload Listing / Download URL
   // -----------------------------------------
-  reloadUploads(page = this.page()) {
-    this.uploadsApi.list(page, this.pageSize()).subscribe({
+  reloadUploads() {
+    this.uploadsApi.list(this.page(), this.pageSize()).subscribe({
       next: (res) => {
         this.uploads.set(res.items);
+        this.totalUploads.set(res.total);
         this.page.set(res.page);
         this.pageSize.set(res.pageSize);
-        this.total.set(res.total);
-        this.totalPages.set(res.totalPages);
       },
       error: () => {
         this.uploads.set([]);
-        this.page.set(1);
-        this.totalPages.set(1);
-        this.total.set(0);
+        this.totalUploads.set(0);
       },
     });
   }
 
   nextPage() {
-    if (this.page() < this.totalPages()) this.reloadUploads(this.page() + 1);
+    if (this.page() < this.totalPages()) {
+      this.page.set(this.page() + 1);
+      this.reloadUploads();
+    }
   }
 
   prevPage() {
-    if (this.page() > 1) this.reloadUploads(this.page() - 1);
+    if (this.page() > 1) {
+      this.page.set(this.page() - 1);
+      this.reloadUploads();
+    }
   }
+
 
   downloadUrl(id: number) {
     return this.uploadsApi.downloadUrl(id);

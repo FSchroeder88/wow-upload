@@ -20,7 +20,7 @@ export type UploadListResponse = {
   page: number;
   pageSize: number;
   total: number;
-  totalPages: number;
+  totalPages?: number;
 };
 
 export type UploadProgressEvent = { progress?: number; done?: boolean };
@@ -32,11 +32,12 @@ export class UploadsService {
   constructor(private http: HttpClient) { }
 
   list(page = 1, pageSize = 25) {
-    return this.http.get<UploadListResponse>(
-      `${this.apiBase}/uploads?page=${page}&pageSize=${pageSize}`,
-      { withCredentials: true },
-    );
+    return this.http.get<UploadListResponse>(`${this.apiBase}/uploads`, {
+      withCredentials: true,
+      params: { page, pageSize },
+    });
   }
+
 
   downloadUrl(id: number) {
     return `${this.apiBase}/uploads/${id}/download`;

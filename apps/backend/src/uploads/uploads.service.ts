@@ -32,10 +32,9 @@ export type UploadListItem = {
 
 export type UploadListResponse = {
   items: UploadListItem[];
+  total: number;
   page: number;
   pageSize: number;
-  total: number;
-  totalPages: number;
 };
 
 @Injectable()
@@ -80,7 +79,7 @@ export class UploadsService {
     uploaderId?: number | null,
     clientHash?: string,
   ): Promise<UploadListItem> {
-    ensureUploadDir()
+    ensureUploadDir();
     const safeUploaderId =
       typeof uploaderId === 'number' && Number.isInteger(uploaderId) && uploaderId > 0
         ? uploaderId
@@ -131,7 +130,7 @@ export class UploadsService {
           storageName,
           mimeType: file.mimetype ?? 'application/octet-stream',
           size: file.size,
-          uploaderId: uploaderId ?? null,
+          uploaderId: finalUploaderId,
           hash: serverHash,
         },
         select: {
@@ -180,48 +179,67 @@ export class UploadsService {
       }),
     ]);
 
-    const totalPages = Math.max(1, Math.ceil(total / safePageSize));
 
     return {
       items,
       page: safePage,
       pageSize: safePageSize,
       total,
-      totalPages,
+      /* totalPages, */
     };
   }
 
-  async listUploadsPaged(page: number, pageSize: number) {
-    const skip = (page - 1) * pageSize;
+  async listUploadsPaged(
+    page = 1,
+    pageSize = 25,
+    auth: { userId: number; isAdmin: boolean },
+  ): Promise<UploadListResponse> {
+    const safePageSize = Math.min(Math.max(pageSize, 1), 100);
+    const safePage = Math.max(page, 1);
 
-    const [total, items] = await Promise.all([
-      this.prisma.upload.count(),
+    const where = auth.isAdmin ? {} : { uploaderId: auth.userId };
+
+    const [total, items] = await this.prisma.$transaction([
+      this.prisma.upload.count({ where }),
       this.prisma.upload.findMany({
+        where,
         orderBy: { createdAt: 'desc' },
-        skip,
-        take: pageSize,
+        skip: (safePage - 1) * safePageSize,
+        take: safePageSize,
         select: {
           id: true,
           originalName: true,
           size: true,
-          createdAt: true,
           hash: true,
+          createdAt: true,
         },
       }),
     ]);
 
-    return { items, total, page, pageSize };
+    return {
+      items,
+      total,
+      page: safePage,
+      pageSize: safePageSize,
+    };
   }
 
   async getDownloadInfo(
     id: number,
+    auth: { userId: number; isAdmin: boolean },
   ): Promise<{ originalName: string; fullPath: string }> {
     const upload = await this.prisma.upload.findUnique({
       where: { id },
-      select: { storageName: true, originalName: true },
+      select: { storageName: true, originalName: true, uploaderId: true },
     });
 
     if (!upload) throw new NotFoundException('Upload not found');
+
+    // Nur Admin oder Owner darf downloaden
+    if (!auth.isAdmin && upload.uploaderId !== auth.userId) {
+      // absichtlich "not found", damit man IDs nicht erraten kann
+      throw new NotFoundException('Upload not found');
+    }
 
     const fullPath = path.join(process.cwd(), 'uploads', upload.storageName);
     if (!fs.existsSync(fullPath)) {
